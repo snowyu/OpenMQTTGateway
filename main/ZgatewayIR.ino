@@ -1,17 +1,17 @@
-/*  
-  OpenMQTTGateway  - ESP8266 or Arduino program for home automation 
+/*
+  OpenMQTTGateway  - ESP8266 or Arduino program for home automation
 
-   Act as a wifi or ethernet gateway between your 433mhz/infrared IR signal  and a MQTT broker 
+   Act as a wifi or ethernet gateway between your 433mhz/infrared IR signal  and a MQTT broker
    Send and receiving command by MQTT
- 
+
   This gateway enables to:
  - receive MQTT data from a topic and send IR signal corresponding to the received MQTT data
  - publish MQTT data to a different topic related to received IR signal
 
     Copyright: (c)Florian ROBERT
-  
+
     This file is part of OpenMQTTGateway.
-    
+
     OpenMQTTGateway is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -25,6 +25,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include  <Arduino.h>
 #include "User_config.h"
 
 #ifdef ZgatewayIR
@@ -226,7 +227,10 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
               j++;
             }
           }
+          pinMode(IR_RECEIVER_GPIO, OUTPUT);
+          digitalWrite(IR_RECEIVER_GPIO, LOW);
           irsend.sendGC(GC, j);
+          pinMode(IR_RECEIVER_GPIO, INPUT);
           signalSent = true;
         }
 #    endif
@@ -251,12 +255,17 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
               j++;
             }
           }
+          pinMode(IR_RECEIVER_GPIO, OUTPUT);
+          digitalWrite(IR_RECEIVER_GPIO, LOW);
           irsend.sendRaw(Raw, j, RawFrequency);
+          pinMode(IR_RECEIVER_GPIO, INPUT);
           signalSent = true;
         }
 #    endif
       } else if (protocol_name && (strcmp(protocol_name, "NEC") != 0)) {
         Log.trace(F("Using Identified Protocol: %s  bits: %d repeat: %d" CR), protocol_name, valueBITS, valueRPT);
+        pinMode(IR_RECEIVER_GPIO, OUTPUT);
+        digitalWrite(IR_RECEIVER_GPIO, LOW);
         signalSent = sendIdentifiedProtocol(protocol_name, data, hex, valueBITS, valueRPT);
       } else {
         Log.trace(F("Using NEC protocol" CR));
@@ -264,12 +273,15 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
         if (valueBITS == 0)
           valueBITS = NEC_BITS;
 #    if defined(ESP8266) || defined(ESP32)
+        pinMode(IR_RECEIVER_GPIO, OUTPUT);
+        digitalWrite(IR_RECEIVER_GPIO, LOW);
         irsend.sendNEC(data, valueBITS, valueRPT);
 #    else
         for (int i = 0; i <= valueRPT; i++)
           irsend.sendNEC(data, valueBITS);
 #    endif
         signalSent = true;
+        pinMode(IR_RECEIVER_GPIO, INPUT);
       }
       if (signalSent) { // we acknowledge the sending by publishing the value to an acknowledgement topic, for the moment even if it is a signal repetition we acknowledge also
         Log.notice(F("MQTTtoIR OK" CR));
