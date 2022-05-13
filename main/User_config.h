@@ -1,17 +1,17 @@
-/*  
-  OpenMQTTGateway  - ESP8266 or Arduino program for home automation 
+/*
+  OpenMQTTGateway  - ESP8266 or Arduino program for home automation
 
-   Act as a wifi or ethernet gateway between your 433mhz/infrared IR signal  and a MQTT broker 
+   Act as a wifi or ethernet gateway between your 433mhz/infrared IR signal  and a MQTT broker
    Send and receiving command by MQTT
- 
+
   This program enables to:
  - receive MQTT data from a topic and send signals corresponding to the received MQTT data
  - publish MQTT data to a different topic related to received signals
-  
+
     Copyright: (c)Florian ROBERT
-  
+
     This file is part of OpenMQTTGateway.
-    
+
     OpenMQTTGateway is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -41,11 +41,11 @@
  * - mqtt_pass
  * - mqtt_server
  * - mqtt_port
- * 
+ *
  * To completely disable WifiManager, define ESPWifiManualSetup.
  * If you do so, please don't forget to set these variables before compiling
- * 
- * Otherwise you can provide these credentials on the web interface after connecting 
+ *
+ * Otherwise you can provide these credentials on the web interface after connecting
  * to the access point with your password (SSID: WifiManager_ssid, password: WifiManager_password)
  */
 /*-------------DEFINE GATEWAY NAME BELOW IT CAN ALSO BE DEFINED IN platformio.ini----------------*/
@@ -143,7 +143,9 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 /*-------------DEFINE YOUR MQTT PARAMETERS BELOW----------------*/
 //MQTT Parameters definition
 #if defined(ESP8266) || defined(ESP32) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
+#ifndef parameters_size
 #  define parameters_size     60
+#endif
 #  define mqtt_topic_max_size 100
 #  ifndef mqtt_max_packet_size
 #    ifdef MQTT_HTTPS_FW_UPDATE
@@ -153,7 +155,9 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 #    endif
 #  endif
 #else
+#ifndef parameters_size
 #  define parameters_size      30
+#endif
 #  define mqtt_topic_max_size  50
 #  define mqtt_max_packet_size 128
 #endif

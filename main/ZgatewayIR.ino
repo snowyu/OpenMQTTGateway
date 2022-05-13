@@ -30,6 +30,8 @@
 
 #ifdef ZgatewayIR
 
+#define LED_IR_INDICATOR 16
+
 #  if defined(ESP8266) || defined(ESP32)
 #    include <IRrecv.h> // Needed if you want to receive IR commands.
 #    include <IRremoteESP8266.h>
@@ -102,9 +104,14 @@ void setupIR() {
 //IR init parameters
 #  if defined(ESP8266) || defined(ESP32)
   irsend.begin();
+  int8_t offset = irsend.calibrate();
+  Log.notice(F("IR_PeriodOffset: %d " CR), offset);
 #  endif
 
   irrecv.enableIRIn(); // Start the receiver
+
+  pinMode(LED_IR_INDICATOR, OUTPUT);
+  digitalWrite(LED_IR_INDICATOR, LOW);
 
   Log.notice(F("IR_EMITTER_GPIO: %d " CR), IR_EMITTER_GPIO);
   Log.notice(F("IR_RECEIVER_GPIO: %d " CR), IR_RECEIVER_GPIO);
@@ -199,6 +206,10 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
       const char* protocol_name = IRdata["protocol_name"];
       unsigned int valueBITS = IRdata["bits"] | 0;
       uint16_t valueRPT = IRdata["repeat"] | repeatIRwNumber;
+      irrecv.disableIRIn();  // Stop the IR receiver
+      pinMode(IR_RECEIVER_GPIO, OUTPUT);
+      digitalWrite(IR_RECEIVER_GPIO, LOW);
+      digitalWrite(LED_IR_INDICATOR, HIGH);
 
       if (raw) {
         Log.trace(F("Raw: %s" CR), raw);
@@ -227,10 +238,7 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
               j++;
             }
           }
-          pinMode(IR_RECEIVER_GPIO, OUTPUT);
-          digitalWrite(IR_RECEIVER_GPIO, LOW);
           irsend.sendGC(GC, j);
-          pinMode(IR_RECEIVER_GPIO, INPUT);
           signalSent = true;
         }
 #    endif
@@ -255,17 +263,12 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
               j++;
             }
           }
-          pinMode(IR_RECEIVER_GPIO, OUTPUT);
-          digitalWrite(IR_RECEIVER_GPIO, LOW);
           irsend.sendRaw(Raw, j, RawFrequency);
-          pinMode(IR_RECEIVER_GPIO, INPUT);
           signalSent = true;
         }
 #    endif
       } else if (protocol_name && (strcmp(protocol_name, "NEC") != 0)) {
         Log.trace(F("Using Identified Protocol: %s  bits: %d repeat: %d" CR), protocol_name, valueBITS, valueRPT);
-        pinMode(IR_RECEIVER_GPIO, OUTPUT);
-        digitalWrite(IR_RECEIVER_GPIO, LOW);
         signalSent = sendIdentifiedProtocol(protocol_name, data, hex, valueBITS, valueRPT);
       } else {
         Log.trace(F("Using NEC protocol" CR));
@@ -273,8 +276,6 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
         if (valueBITS == 0)
           valueBITS = NEC_BITS;
 #    if defined(ESP8266) || defined(ESP32)
-        pinMode(IR_RECEIVER_GPIO, OUTPUT);
-        digitalWrite(IR_RECEIVER_GPIO, LOW);
         irsend.sendNEC(data, valueBITS, valueRPT);
 #    else
         for (int i = 0; i <= valueRPT; i++)
@@ -287,6 +288,9 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
         Log.notice(F("MQTTtoIR OK" CR));
         pub(subjectGTWIRtoMQTT, IRdata);
       }
+
+      pinMode(IR_RECEIVER_GPIO, INPUT);
+      digitalWrite(LED_IR_INDICATOR, LOW);
       irrecv.enableIRIn(); // ReStart the IR receiver (if not restarted it is not able to receive data)
     } else {
       Log.error(F("MQTTtoIR failed json read" CR));
