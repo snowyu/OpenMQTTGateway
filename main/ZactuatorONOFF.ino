@@ -44,7 +44,27 @@ void MQTTtoONOFF(char* topicOri, JsonObject& ONOFFdata) {
       // we acknowledge the sending by publishing the value to an acknowledgement topic
       pub(subjectGTWONOFFtoMQTT, ONOFFdata);
     } else {
-      Log.error(F("MQTTtoONOFF failed json read" CR));
+      if (ONOFFdata["cmd"] == "high_pulse") {
+        Log.notice(F("MQTTtoONOFF high_pulse ok" CR));
+        Log.notice(F("GPIO number: %d" CR), gpio);
+        int pulselength = ONOFFdata["pulse_length"] | 500;
+        Log.notice(F("Pulse length: %d ms" CR), pulselength);
+        pinMode(gpio, OUTPUT);
+        digitalWrite(gpio, HIGH);
+        delay(pulselength);
+        digitalWrite(gpio, LOW);
+      } else if (ONOFFdata["cmd"] == "low_pulse") {
+        Log.notice(F("MQTTtoONOFF low_pulse ok" CR));
+        Log.notice(F("GPIO number: %d" CR), gpio);
+        int pulselength = ONOFFdata["pulse_length"] | 500;
+        Log.notice(F("Pulse length: %d ms" CR), pulselength);
+        pinMode(gpio, OUTPUT);
+        digitalWrite(gpio, LOW);
+        delay(pulselength);
+        digitalWrite(gpio, HIGH);
+      } else {
+        Log.error(F("MQTTtoONOFF failed json read" CR));
+      }
     }
   }
 }
@@ -75,5 +95,16 @@ void MQTTtoONOFF(char* topicOri, char* datacallback) {
   }
 }
 #  endif
+
+void ActuatorButtonTrigger() {
+  uint8_t level = !digitalRead(ACTUATOR_ONOFF_GPIO);
+  char* level_string = "ON";
+  if (level != ACTUATOR_ON) {
+    level_string = "OFF";
+  }
+  Log.trace(F("Actuator triggered %s by button" CR), level_string);
+  digitalWrite(ACTUATOR_ONOFF_GPIO, level);
+  pub(subjectGTWONOFFtoMQTT, level_string);
+}
 
 #endif
