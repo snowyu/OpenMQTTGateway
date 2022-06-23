@@ -200,10 +200,14 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
       Log.trace(F("hex: %s" CR), hex);
       data = getUInt64fromHex(hex);
     }
-    if (data != 0 || raw) {
+
+    JsonVariant vIRData = IRdata;
+    bool isArrayIRData = vIRData.is<JsonArray&>();
+
+    if (data != 0 || raw || isArrayIRData) {
       Log.trace(F("MQTTtoIR value || raw  detected" CR));
       bool signalSent = false;
-      const char* protocol_name = IRdata["protocol_name"];
+      const char* protocol_name = isArrayIRData ? (const char*)"Raw" : IRdata["protocol_name"];
       unsigned int valueBITS = IRdata["bits"] | 0;
       uint16_t valueRPT = IRdata["repeat"] | repeatIRwNumber;
       irrecv.disableIRIn();  // Stop the IR receiver
@@ -211,7 +215,17 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
       digitalWrite(IR_RECEIVER_GPIO, LOW);
       digitalWrite(LED_IR_INDICATOR, HIGH);
 
-      if (raw) {
+      // if (isArrayIRData) {
+      //   // ugly trick to convert raw double.
+      //   String s;
+      //   for (JsonVariant item : vIRData.to<JsonArray>()) {
+      //     if (!s.isEmpty()) s += ",";
+      //     s += item.as<String>();
+      //   }
+      //   raw = s.c_str();
+      // }
+
+      if (raw || isArrayIRData) {
         Log.trace(F("Raw: %s" CR), raw);
         unsigned int s = strlen(raw);
         //number of "," value count
@@ -245,21 +259,32 @@ void MQTTtoIR(char* topicOri, JsonObject& IRdata) {
 #    ifdef IR_RAW
         if (strcmp(protocol_name, "Raw") == 0) { // sending Raw data
           Log.trace(F("Raw" CR));
+          if (isArrayIRData) {
+            JsonArray arr = vIRData.to<JsonArray>();
+            count = arr.size();
+          }
 //buffer allocation from char datacallback
 #      if defined(ESP8266) || defined(ESP32)
           uint16_t Raw[count + 1];
 #      else
           unsigned int Raw[count + 1];
 #      endif
-          String value = "";
           int j = 0;
-          for (int i = 0; i < s; i++) {
-            if (raw[i] != ',') {
-              value = value + String(raw[i]);
+          if (!isArrayIRData) {
+            String value = "";
+            for (int i = 0; i < s; i++) {
+              if (raw[i] != ',') {
+                value = value + String(raw[i]);
+              }
+              if ((raw[i] == ',') || (i == s - 1)) {
+                Raw[j] = value.toInt();
+                value = "";
+                j++;
+              }
             }
-            if ((raw[i] == ',') || (i == s - 1)) {
-              Raw[j] = value.toInt();
-              value = "";
+          } else {
+            for (JsonVariant item : vIRData.to<JsonArray>()) {
+              Raw[j] = item.as<int>();
               j++;
             }
           }
