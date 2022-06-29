@@ -166,7 +166,17 @@ void IRtoMQTT() {
 #    endif
       rawsend[i] = results.rawbuf[i];
     }
+    // TODO: need to rewrite for AI-WIN box
+    irrecv.disableIRIn();  // Stop the IR receiver
+    pinMode(IR_RECEIVER_GPIO, OUTPUT);
+    digitalWrite(IR_RECEIVER_GPIO, LOW);
+    digitalWrite(LED_IR_INDICATOR, HIGH);
+
     irsend.sendRaw(rawsend, results.rawlen, RawFrequency);
+
+    pinMode(IR_RECEIVER_GPIO, INPUT);
+    digitalWrite(LED_IR_INDICATOR, LOW);
+    irrecv.enableIRIn(); // ReStart the IR receiver (if not restarted it is not able to receive data)
     Log.trace(F("raw redirected" CR));
 #  endif
     irrecv.resume(); // Receive the next value
@@ -184,6 +194,10 @@ void IRtoMQTT() {
         pubMQTT(subjectForwardMQTTtoIR, MQTTvalue);
       }
     }
+  #  if defined(ESP8266) || defined(ESP32)
+  pub(subjectIRtoMQTTC, resultToSourceCode(&results).c_str());
+  #    endif
+
   }
 }
 

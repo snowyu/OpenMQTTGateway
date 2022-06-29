@@ -34,6 +34,7 @@ extern void MQTTtoIR(char* topicOri, JsonObject& RFdata);
 //IR MQTT Subjects
 #define subjectGTWIRtoMQTT     "/IRtoMQTT"
 #define subjectIRtoMQTT        "/IRtoMQTT"
+#define subjectIRtoMQTTC       "/IRtoMQTT/C"
 #define subjectMQTTtoIR        "/commands/MQTTtoIR"
 #define subjectForwardMQTTtoIR "home/gateway2/commands/MQTTtoIR"
 
